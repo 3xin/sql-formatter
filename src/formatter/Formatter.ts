@@ -44,12 +44,14 @@ export default class Formatter {
   }
 
   private formatStatement(statement: StatementNode): string {
-    const layout = new ExpressionFormatter({
+    const exLayout = new ExpressionFormatter({
       cfg: this.cfg,
       dialectCfg: this.dialect.formatOptions,
       params: this.params,
       layout: new Layout(new Indentation(indentString(this.cfg))),
-    }).format(statement.children);
+    });
+
+    const layout = exLayout.format(statement.children);
 
     if (!statement.hasSemicolon) {
       // do nothing

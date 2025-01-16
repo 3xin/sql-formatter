@@ -2,7 +2,7 @@ import { FormatOptions } from '../FormatOptions.js';
 import { equalizeWhitespace, isMultiline, last } from '../utils.js';
 
 import Params from './Params.js';
-import { isTabularStyle } from './config.js';
+import { indentString, isTabularStyle } from './config.js';
 import { TokenType } from '../lexer/token.js';
 import {
   AllColumnsAsteriskNode,
@@ -36,6 +36,7 @@ import {
 import Layout, { WS } from './Layout.js';
 import toTabularFormat, { isTabularToken } from './tabularStyle.js';
 import InlineLayout, { InlineLayoutError } from './InlineLayout.js';
+import Indentation from './Indentation.js';
 
 interface ExpressionFormatterParams {
   cfg: FormatOptions;
@@ -83,7 +84,6 @@ export default class ExpressionFormatter {
 
   public format(nodes: AstNode[]): Layout {
     this.nodes = nodes;
-
     for (this.index = 0; this.index < this.nodes.length; this.index++) {
       this.formatNode(this.nodes[this.index]);
     }
@@ -269,13 +269,15 @@ export default class ExpressionFormatter {
     this.layout.add(WS.NEWLINE, WS.INDENT, this.showKw(node.nameKw), WS.NEWLINE);
     this.layout.indentation.increaseTopLevel();
     this.layout.add(WS.INDENT);
-    this.layout = this.formatSubExpression(node.children);
+    this.layout = this.formatSubExpressionInline(node.children);
+    // this.layout = this.formatSubExpression(node.children);
     this.layout.indentation.decreaseTopLevel();
   }
 
   private formatClauseInOnelineStyle(node: ClauseNode) {
     this.layout.add(WS.NEWLINE, WS.INDENT, this.showKw(node.nameKw), WS.SPACE);
-    this.layout = this.formatSubExpression(node.children);
+    this.layout = this.formatSubExpressionInline(node.children);
+    // this.layout = this.formatSubExpression(node.children);
   }
 
   private formatClauseInTabularStyle(node: ClauseNode) {
@@ -443,6 +445,70 @@ export default class ExpressionFormatter {
     } else {
       return comment.split(/\n/).map(line => line.replace(/^\s*/, ''));
     }
+  }
+
+  private CalculateLengthInline(items: string[], beforeCharsLenght: number = 0): string {
+    const maxLength = this.cfg.propertyAccessWidth;
+    const lengthsOfItems = items.map(item => item.length);
+    let returnStr = '';
+    let calculength = beforeCharsLenght;
+    for (let i = 0; i < lengthsOfItems.length; i++) {
+      if (calculength + lengthsOfItems[i] > maxLength) {
+        returnStr += '\n' + items[i];
+        calculength = beforeCharsLenght + lengthsOfItems[i];
+      } else {
+        returnStr += items[i];
+        calculength += lengthsOfItems[i];
+      }
+    }
+    return returnStr;
+  }
+
+  private formatSubExpressionInline(nodes: AstNode[]): Layout {
+    const indentationLevel = this.layout.indentation.getLevel();
+    const currentIndentationChars = indentationLevel * this.cfg.tabWidth;
+    if (nodes.find((node: AstNode) => ![
+      'function_call',
+      'parameterized_data_type',
+      'array_subscript',
+      'property_access',
+      'between_predicate',
+      'comma',
+      'operator',
+      'literal',
+      'identifier',
+      'parameter',
+      'data_type'
+    ].includes(node.type)) || !this.cfg.propertyAccessWidth) {
+      return new ExpressionFormatter({
+        cfg: this.cfg,
+        dialectCfg: this.dialectCfg,
+        params: this.params,
+        layout: this.layout,
+        inline: this.inline,
+      }).format(nodes);
+    }
+
+    const normalLayout = new ExpressionFormatter({
+      cfg: { ...this.cfg, expressionWidth: Infinity },
+      dialectCfg: this.dialectCfg,
+      params: this.params,
+      layout: new Layout(new Indentation(indentString(this.cfg))),
+      inline: this.inline,
+    }).format(nodes);
+
+    const items = normalLayout.toString();
+    const itemsArr = items.split('\n');
+    const itemsArrWithSepSpaces = itemsArr.map((item, index) => {
+      if (index === itemsArr.length - 1) { return item; }
+      else { return item + ' '; }
+    });
+    const newStr = this.CalculateLengthInline(itemsArrWithSepSpaces, currentIndentationChars);
+    const newItemList = newStr.split('\n');
+    newItemList.forEach((itemStr: string) => {
+      this.layout.add(itemStr, WS.NEWLINE, WS.INDENT);
+    });
+    return this.layout;
   }
 
   private formatSubExpression(nodes: AstNode[]): Layout {

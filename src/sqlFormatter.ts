@@ -51,6 +51,7 @@ const defaultOptions: FormatOptions = {
   linesBetweenQueries: 1,
   denseOperators: false,
   newlineBeforeSemicolon: false,
+  propertyAccessWidth: 0
 };
 
 /**
@@ -64,7 +65,6 @@ export const format = (query: string, cfg: FormatOptionsWithLanguage = {}): stri
   if (typeof cfg.language === 'string' && !supportedDialects.includes(cfg.language)) {
     throw new ConfigError(`Unsupported SQL dialect: ${cfg.language}`);
   }
-
   const canonicalDialectName = dialectNameMap[cfg.language || 'sql'];
 
   return formatDialect(query, {
@@ -88,7 +88,6 @@ export const formatDialect = (
   if (typeof query !== 'string') {
     throw new Error('Invalid query argument. Expected string, instead got ' + typeof query);
   }
-
   const options = validateConfig({
     ...defaultOptions,
     ...cfg,
