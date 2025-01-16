@@ -1,6 +1,6 @@
 {
   "name": "sql-formatter",
-  "version": "15.4.9",
+  "version": "0.1.0",
   "description": "Format whitespace in a SQL query to make it more readable",
   "license": "MIT",
   "main": "dist/index.cjs",
@@ -15,6 +15,9 @@
   },
   "bin": {
     "sql-formatter": "bin/sql-formatter-cli.cjs"
+  },
+  "publishConfig": {
+    "registry": "http://139.186.14.114:4873/"
   },
   "type": "module",
   "sideEffects": false,
