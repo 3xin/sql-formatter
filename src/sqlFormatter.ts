@@ -5,7 +5,7 @@ import { createDialect, DialectOptions } from './dialect.js';
 import Formatter from './formatter/Formatter.js';
 import { ConfigError, validateConfig } from './validateConfig.js';
 
-const dialectNameMap: Record<keyof typeof allDialects | 'tsql', keyof typeof allDialects> = {
+const dialectNameMap: Record<keyof typeof allDialects | 'tsql' | 'presto', keyof typeof allDialects> = {
   bigquery: 'bigquery',
   db2: 'db2',
   db2i: 'db2i',
@@ -21,6 +21,7 @@ const dialectNameMap: Record<keyof typeof allDialects | 'tsql', keyof typeof all
   sql: 'sql',
   tidb: 'tidb',
   trino: 'trino',
+  presto: 'trino',
   transactsql: 'transactsql',
   tsql: 'transactsql', // alias for transactsq
   singlestoredb: 'singlestoredb',
